@@ -1,0 +1,115 @@
+# Compila la app y le manda el APK a VersApp.
+# Lo dispara VersApp desde Builds / APKs → "Automatizado" (no se ejecuta solo).
+#
+# Secrets que hay que cargar en este repositorio
+# (Settings → Secrets and variables → Actions → New repository secret).
+# Los valores los muestra VersApp en Proyectos → Configurar → "Integración CI":
+#   VERSAPP_URL          dirección pública de VersApp (el túnel, ej. https://xxxx.trycloudflare.com)
+#   VERSAPP_API_KEY      API key del proyecto (va en el encabezado x-api-key, NUNCA en la URL)
+#   VERSAPP_PROYECTO_ID  id del proyecto en VersApp
+#
+# IMPORTANTE: este archivo tiene que estar en CADA rama desde la que se compile
+# (qa, main, la rama local de cada uno). GitHub usa el archivo de la rama elegida.
+name: Build APK y subir a VersApp
+
+on:
+  workflow_dispatch:
+    # VersApp manda estos 4 datos. Hay que declararlos aunque lleguen vacíos.
+    # version y build_numero llegan VACÍOS si en VersApp no se escribe versión:
+    # entonces se usan VERSION_NAME y VERSION_CODE de app/build.gradle.kts, y VersApp
+    # lee la versión del AndroidManifest.xml del APK.
+    inputs:
+      version:
+        description: "Versión (ej. 1.0.3). Vacía = la de app/build.gradle.kts"
+        required: false
+        default: ""
+      entorno:
+        description: "Entorno (dev, qa, prod)"
+        required: false
+        default: "dev"
+      build_numero:
+        description: "versionCode. Vacío = el de app/build.gradle.kts"
+        required: false
+        default: ""
+      build_id:
+        description: "Id de la build en VersApp (lo completa VersApp)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código de la rama
+        uses: actions/checkout@v4
+
+      # Gradle de este proyecto pide Java 25 (gradle/gradle-daemon-jvm.properties).
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      # Los datos de VersApp van por variables de entorno (env:) y no metidos directo
+      # en el comando: así un texto raro en la versión no puede ejecutar comandos.
+      - name: Compilar el APK release
+        env:
+          VERSION: ${{ inputs.version }}
+          BUILD_NUMERO: ${{ inputs.build_numero }}
+        run: |
+          chmod +x gradlew
+          ARGS=()
+          if [ -n "$VERSION" ]; then ARGS+=("-PversionName=$VERSION"); fi
+          if [ -n "$BUILD_NUMERO" ]; then ARGS+=("-PversionCode=$BUILD_NUMERO"); fi
+          ./gradlew assembleRelease --no-daemon "${ARGS[@]}"
+
+      # También queda guardado en GitHub (pestaña Actions → la ejecución → Artifacts).
+      - name: Guardar el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+
+      # VersApp lee la versión del APK: no hace falta mandarla.
+      - name: Subir el APK a VersApp
+        env:
+          VERSAPP_URL: ${{ secrets.VERSAPP_URL }}
+          VERSAPP_API_KEY: ${{ secrets.VERSAPP_API_KEY }}
+          PROYECTO_ID: ${{ secrets.VERSAPP_PROYECTO_ID }}
+          ENTORNO: ${{ inputs.entorno }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          APK_PATH=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$APK_PATH" ]; then echo "No se encontró el APK"; exit 1; fi
+          curl -sSf --retry 2 -X POST "$VERSAPP_URL/api/versiones/upload" \
+            -H "x-api-key: $VERSAPP_API_KEY" \
+            -F "apk=@$APK_PATH" \
+            -F "proyecto_id=$PROYECTO_ID" \
+            -F "entorno=$ENTORNO" \
+            -F "build_id=$BUILD_ID"
+
+      # Si algo falla o se cancela, VersApp marca esa build (y no otra).
+      - name: Avisar a VersApp que falló
+        if: failure()
+        env:
+          VERSAPP_URL: ${{ secrets.VERSAPP_URL }}
+          VERSAPP_API_KEY: ${{ secrets.VERSAPP_API_KEY }}
+          PROYECTO_ID: ${{ secrets.VERSAPP_PROYECTO_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          curl -s -X POST "$VERSAPP_URL/api/versiones/marcar-fallido" \
+            -H "x-api-key: $VERSAPP_API_KEY" -H "Content-Type: application/json" \
+            -d '{"proyecto_id":"'"$PROYECTO_ID"'","build_id":"'"$BUILD_ID"'","estado":"fallido","mensaje":"El workflow falló"}'
+
+      - name: Avisar a VersApp que se canceló
+        if: cancelled()
+        env:
+          VERSAPP_URL: ${{ secrets.VERSAPP_URL }}
+          VERSAPP_API_KEY: ${{ secrets.VERSAPP_API_KEY }}
+          PROYECTO_ID: ${{ secrets.VERSAPP_PROYECTO_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          curl -s -X POST "$VERSAPP_URL/api/versiones/marcar-fallido" \
+            -H "x-api-key: $VERSAPP_API_KEY" -H "Content-Type: application/json" \
+            -d '{"proyecto_id":"'"$PROYECTO_ID"'","build_id":"'"$BUILD_ID"'","estado":"cancelado","mensaje":"Cancelado"}'

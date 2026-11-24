@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- caja de reparto -->
+    <path android:fillColor="#FFFFFF" android:pathData="M34,38h18v16h-18z" />
+    <path android:fillColor="#E8590C" android:pathData="M37,44h12v2h-12z" />
+    <!-- cuerpo de la moto -->
+    <path android:fillColor="#FFFFFF" android:pathData="M32,56h30l6,-10h6l-2,4h-2l-4,8v6h-34z" />
+    <!-- ruedas -->
+    <path android:fillColor="#FFFFFF" android:pathData="M40,70m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path android:fillColor="#E8590C" android:pathData="M40,70m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M70,70m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path android:fillColor="#E8590C" android:pathData="M70,70m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+</vector>

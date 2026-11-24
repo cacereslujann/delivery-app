@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="naranja">#FFE8590C</color>
+    <color name="naranja_claro">#FFFFF1E8</color>
+    <color name="fondo">#FFF7F7F8</color>
+    <color name="texto">#FF1F2328</color>
+    <color name="texto_suave">#FF6B7280</color>
+    <color name="verde">#FF16A34A</color>
+</resources>

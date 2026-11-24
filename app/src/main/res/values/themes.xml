@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.VersAppDelivery" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/naranja</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondaryContainer">@color/naranja_claro</item>
+        <item name="android:windowBackground">@color/fondo</item>
+    </style>
+
+    <style name="Theme.VersAppDelivery" parent="Base.Theme.VersAppDelivery" />
+</resources>
